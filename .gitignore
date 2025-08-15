@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Addition folders
+flask_session
+myenv
+
 # User-specific files
 *.rsuser
 *.suo
