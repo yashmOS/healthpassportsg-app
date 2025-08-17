@@ -2,9 +2,18 @@
 This repo is the main app for healthpassportsg. It manages both frontend and backend using flask framework.
 
 ## Getting Started
-To load all dependancies
+This repo uses `uv` to manage dependencies and virtual environment. Follow this [guide](https://docs.astral.sh/uv/getting-started/) to set up `uv`. 
+
+To create virtual environment and install all dependencies, run: 
+
+```sh
+uv sync
 ```
-pip install -r requirements.txt
+
+Activate virtual environment:
+
+```sh
+source .venv/bin/activate
 ```
 
 Run application with this command   
