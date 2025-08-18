@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block main %}
+    
+    <div class="container p-5 my-5 border">
+        <form method="POST" enctype="multipart/form-data" class="p-4 border rounded bg-light">
+        <div class="mb-3">
+            <label for="formFile" class="form-label">Upload your photo</label>
+            <input class="form-control" type="file" id="formFile" name="photo" accept="image/*">
+        </div>
+        <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+        {% if photo_url %}
+            <div class="mt-4">
+                <h2>Uploaded Photo</h2>
+                <img src="{{ photo_url }}" alt="Uploaded Photo" class="img-fluid w-50">
+            </div>
+        {% endif %}
+    </div>
+
+{% endblock %}

@@ -2,9 +2,10 @@ import os
 import logging
 import sqlite3
 
-from flask import Flask, flash, redirect, render_template, request, session
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 from helpers.login import login_required
 from helpers.sql import SQLITE
@@ -27,6 +28,12 @@ Session(app)
 # SQLite database
 db = SQLITE("healthpassportsg.db", traceback=True)
 
+UPLOAD_FOLDER = "static/uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.after_request
 def after_request(response):
@@ -42,6 +49,28 @@ def after_request(response):
 def index():
     return render_template("index.html")
 
+@app.route("/upload", methods=["GET", "POST"])
+def upload():
+    """Upload a photo"""
+    photo_url = None
+    if request.method == "POST":
+        if "photo" not in request.files:
+            flash("No file part")
+            return redirect(request.url)
+        file = request.files["photo"]
+        if file.filename == "":
+            flash("No selected file")
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(filepath)
+            photo_url = url_for("static", filename="uploads/" + filename)
+            flash("File uploaded successfully!")
+        else:
+            flash("Invalid file type")
+    return render_template("upload.html", photo_url=photo_url)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
