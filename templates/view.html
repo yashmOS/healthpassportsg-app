@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block main %}
+    <!-- AI Summary Button -->
+    <div align="center">
+        <button style="background-color: lightblue; padding: 8px 16px; border: none; border-radius: 15px;">
+            Generate Full Summary with AI
+        </button>
+    </div>
+    <br>
+
+    <!-- Medical Records -->
+    <main>
+        <!-- Iterate through all records -->
+        {% for record in records %}
+        
+        <table width="100%" cellpadding="10" cellspacing="0" border="1" style="border-collapse: collapse; margin-bottom: 20px; background-color: #f5f5f5;">
+            <tr>
+                <td colspan="3">
+                    <strong>{{ record['date'] }}</strong>
+                </td>
+            </tr>
+            <tr>
+                <td width="80%">
+                    <p><strong>🏥 {{ record['hospital_name'] }}</strong></p>
+                    <p> <strong>🩺 {{ record['condition'] }}</strong><br>
+                    <strong>💊 {{ record['prescription'] }}</strong></p>
+                </td>
+                <td width="20%" align="center">
+                    <button style="background-color: lightblue; padding: 5px 10px; border: none; margin: 2px; border-radius: 15px;">View Details</button><br>
+                </td>
+                <td>
+                    <button style="background-color: lightblue; padding: 5px 10px; border: none; margin: 2px; border-radius: 15px;">Share</button>
+                </td>
+            </tr>
+        </table>
+
+        {% endfor %}
+    </main>
+
+{% endblock %}

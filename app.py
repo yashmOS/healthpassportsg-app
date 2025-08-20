@@ -45,7 +45,6 @@ def after_request(response):
 
 
 @app.route("/")
-@login_required
 def index():
     return render_template("index.html")
 
@@ -108,7 +107,7 @@ def login():
         session["user_id"] = rows[0]["id"]
 
         # Redirect user to home page
-        return redirect("/")
+        return redirect("/view")
 
     # GET -> login page
     else:
@@ -159,7 +158,34 @@ def register():
             flash("username already taken", "error")
             return render_template("register.html")
 
-        return redirect("/")
+        # Set current session to newly created account
+        session["user_id"] = request.form.get("username")
+        return redirect("/view")
 
     # GET -> user registration form
     return render_template("register.html")
+
+@app.route("/view", methods=["GET"])
+def view():
+    # Dummy data, to fetch from DB and return with a list of dictionaries containing the following fields.
+    medical_records = [
+        {
+            'date': '1 May 2025',
+            'hospital_name': 'Raffles Medical',
+            'condition': 'Headache',
+            'prescription': 'Panadol'
+        },
+        {
+            'date': '29 January 2024',
+            'hospital_name': 'Thomson Medical',
+            'condition': 'Lower back pain',
+            'prescription': 'Panadol'
+        },
+        {
+            'date': '8 May 2023',
+            'hospital_name': 'Square Hospital',
+            'condition': 'Malaria',
+            'prescription': None
+        }
+    ]
+    return render_template('view.html', records=medical_records)
