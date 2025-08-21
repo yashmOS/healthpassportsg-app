@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block main %}
+
+    <!-- Profile function -->
+    <div class="container p-5 my-5 border">
+        <h1 class="mb-4">Profile</h1>
+        <p>Welcome, {{ user.username }}!</p>
+        <p>Email: {{ user.email }}</p>
+
+{% endblock %}
