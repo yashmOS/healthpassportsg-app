@@ -1,227 +1,270 @@
-import json
+# ocr.py
+"""
+OCR + Gemini Parser Module
+--------------------------
+This script extracts text from PDFs/images (with language detection),
+sends them to Gemini for structured parsing, and saves results as JSON.
+
+Usage:
+    python ocr.py <path_to_file>
+Or import as a module:
+    from ocr import run_pipeline, Result
+"""
+
 import os
 import re
+import json
+from typing import Dict
+from pprint import pprint
 
-import cv2
-import numpy as np
+import fitz  # PyMuPDF for machine-readable PDFs
 import pytesseract
 from pdf2image import convert_from_path
-from PIL import Image
-from PIL.ImageFile import ImageFile
-from PIL.PpmImagePlugin import PpmImageFile
+import cv2
+import numpy as np
+from langdetect import detect, DetectorFactory
+
+import google.generativeai as genai
+
+# Ensure langdetect is deterministic
+DetectorFactory.seed = 0
+
+# Configure Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_API_KEY")  # Replace securely
+genai.configure(api_key=GEMINI_API_KEY)
 
 
-# Load and convert file to PIL images
-def load_input_file(file_path: str) -> list[Image.Image] | list[ImageFile]:
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext == ".pdf":
-        images = convert_from_path(file_path)
-    elif ext in [".jpg", ".jpeg", ".png"]:
-        images = [Image.open(file_path)]
-    else:
-        raise ValueError("Unsupported file format")
-    return images
+
+# Language Detection
 
 
-# Preprocess image to handle shadowed text using adaptive thresholding
-def preprocess_image(img: PpmImageFile) -> np.ndarray:
-    gray = cv2.cvtColor(np.array(img), cv2.COLOR_BGR2GRAY)
-    resized = cv2.resize(gray, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_LINEAR)
-    processed_image = cv2.adaptiveThreshold(
-        resized, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 63, 12
-    )
-    return processed_image
+def detect_language_from_text(text: str) -> str:
+    try:
+        return detect(text)
+    except:
+        return "unknown"
 
 
-# Detect language from image (basic version using Tesseract script confidence)
-def detect_language(image: np.ndarray) -> str:
-    langs = ["eng", "tam", "mal", "chi_sim"]  # Chinese Simplified, Tamil, Malay
+def detect_language_from_image(img: np.ndarray) -> str:
+    langs = ['eng', 'tam', 'mal', 'chi_sim']
     scores = {}
+
     for lang in langs:
-        data = pytesseract.image_to_data(
-            image, lang=lang, output_type=pytesseract.Output.dict
-        )
-        confs = [int(conf) for conf in data["conf"] if conf != "-1"]
+        data = pytesseract.image_to_data(img, lang=lang, output_type=pytesseract.Output.DICT)
+        confs = [int(conf) for conf in data['conf'] if conf != '-1']
         avg_conf = sum(confs) / len(confs) if confs else 0
         scores[lang] = avg_conf
+
     return max(scores, key=scores.get)
 
 
-# OCR function
-def ocr_image(img: np.ndarray, lang: str = "eng") -> str:
-    return pytesseract.image_to_string(img, lang=lang)
+# Text Extraction
+
+def extract_text_from_pdf(file_path: str) -> str:
+    text = ""
+    with fitz.open(file_path) as doc:
+        for page in doc:
+            text += page.get_text("text") + "\n"
+    return text.strip()
 
 
-# Main pipeline
-def run_ocr(file_path, output_json="output.json"):
-    images = load_input_file(file_path)
-    results = []
+def ocr_pdf(file_path: str) -> str:
+    pages = convert_from_path(file_path, dpi=300)
+    all_text = []
 
-    for i, pil_img in enumerate(images):
-        pre_img = preprocess_image(pil_img)
-        detected_lang = detect_language(pre_img)
-        print(f"[Page {i + 1}] Detected language: {detected_lang}")
-        text = ocr_image(pre_img, lang=detected_lang)
+    for i, page in enumerate(pages):
+        img = np.array(page)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        processed = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, 63, 12
+        )
 
-        results.append({"page": i + 1, "language": detected_lang, "text": text.strip()})
+        lang = detect_language_from_image(processed)
+        print(f"[Page {i+1}] Detected OCR language: {lang}")
+        text = pytesseract.image_to_string(processed, lang=lang)
+        all_text.append(text)
+
+    return "\n".join(all_text)
+
+
+def ocr_image(file_path: str) -> str:
+    img = cv2.imread(file_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    processed = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 63, 12
+    )
+
+    lang = detect_language_from_image(processed)
+    print(f"[Image] Detected OCR language: {lang}")
+    return pytesseract.image_to_string(processed, lang=lang)
+
+
+def load_and_extract_text(file_path: str) -> str:
+    ext = os.path.splitext(file_path)[1].lower()
+    text = ""
+
+    if ext == ".pdf":
+        text = extract_text_from_pdf(file_path)
+        if text.strip():
+            detected_lang = detect_language_from_text(text)
+            print(f"[PDF] Machine-readable text detected (lang: {detected_lang})")
+        else:
+            text = ocr_pdf(file_path)
+    elif ext in [".jpg", ".jpeg", ".png"]:
+        text = ocr_image(file_path)
+    else:
+        raise ValueError("Unsupported file format")
+
+    return text.strip()
+
+# Text Cleaner
+
+def clean_text(text: str) -> str:
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"(\d)\s+(\d)", r"\1\2", text)
+    text = re.sub(r"([a-zA-Z])\s+([a-zA-Z])", r"\1\2", text)
+    text = re.sub(r"(?<!\d)([.,])(?!\d)", r" \1 ", text)
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    text = text.replace("|", "I")
+    return text.strip()
+
+# Gemini Parser
+
+def parse_medical_with_gemini(file_path: str, extracted_text: str) -> Dict:
+    prompt = f"""
+    You are a medical document parser. Read the document carefully and extract
+    information into the following JSON structure:
+
+    {{
+      "patient_details": {{
+        "name": "",
+        "date": "",
+        "address": "",
+        "phone": "",
+        "refill": ""
+      }},
+      "record_metadata": {{
+        "record_type": "",
+        "hospital_name": "",
+        "doctor_name": "",
+        "department": "",
+        "record_date": "",
+        "other_metadata": {{}}
+      }},
+      "sections": {{
+        "line_items": [],
+        "medications": [],
+        "lab_results": [],
+        "diagnoses": []
+      }},
+      "totals": {{
+        "before_subsidy": "",
+        "govt_subsidy": "",
+        "before_gst": "",
+        "gst": "",
+        "gst_absorbed": "",
+        "after_subsidy": "",
+        "net_payment": "",
+        "final_payable": ""
+      }},
+      "other_details": {{}}
+    }}
+
+    Rules:
+    - Always include the keys shown above, even if empty.
+    - If a section is not relevant, return an empty list.
+    - If a field is missing, leave it as an empty string.
+    - Return JSON only. No explanations.
+
+    Extracted Text:
+    {extracted_text}
+    """
+
+    file_ref = genai.upload_file(path=file_path)
+
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(
+        contents=[
+            {"role": "user", "parts": [{"text": prompt}]},
+            file_ref
+        ],
+        generation_config={
+            "response_mime_type": "application/json",
+            "temperature": 0
+        }
+    )
+
+    try:
+        return json.loads(response.text)
+    except json.JSONDecodeError:
+        print("Error decoding JSON response. Raw response:")
+        print(response.text)
+        return {}
+
+
+
+# Normalizer
+
+
+def normalize_output(data: Dict) -> Dict:
+    def clean_nulls(obj):
+        if isinstance(obj, dict):
+            return {k: clean_nulls(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [clean_nulls(v) for v in obj]
+        elif obj is None:
+            return ""
+        elif isinstance(obj, str):
+            return obj.replace("O", "0") if any(c.isdigit() for c in obj) else obj.strip()
+        else:
+            return obj
+
+    data = clean_nulls(data)
+
+    if "totals" in data:
+        if data["totals"]["net_payment"] == "" and data["totals"]["after_subsidy"] != "":
+            data["totals"]["net_payment"] = data["totals"]["after_subsidy"]
+
+    if "record_metadata" in data:
+        if data["patient_details"]["date"] == "" and data["record_metadata"]["record_date"] != "":
+            data["patient_details"]["date"] = data["record_metadata"]["record_date"]
+
+    return data
+
+
+
+# Pipeline Runner
+
+
+Result = {}
+
+def run_pipeline(file_path: str, output_json: str = "Result.json") -> Dict:
+    global Result
+
+    raw_text = load_and_extract_text(file_path)
+    cleaned_text = clean_text(raw_text)
+
+    gemini_raw_result = parse_medical_with_gemini(file_path, cleaned_text)
+    Result = normalize_output(gemini_raw_result)
 
     with open(output_json, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        json.dump(Result, f, indent=2, ensure_ascii=False)
 
-    print(f"OCR complete. Saved to {output_json}")
-    return results
-
-
-ocr_result = run_ocr("/content/test_text.png")
-
-# Post-OCR Cleaner
+    print(f"✅ Parsing complete. Results saved to {output_json}")
+    return Result
 
 
-def clean_ocr_text(ocr_results: list[dict]) -> list[dict]:
-    cleaned_results = []
 
-    for result in ocr_results:
-        text = result["text"]
-
-        # Basic fixes
-        text = re.sub(r"\s+", " ", text)  # Collapse multiple whitespaces
-        text = re.sub(r"(\d)\s+(\d)", r"\1\2", text)  # Fix broken numbers
-        text = re.sub(r"([a-zA-Z])\s+([a-zA-Z])", r"\1\2", text)  # Fix broken words
-        text = re.sub(
-            r"(?<!\d)([.,])(?!\d)", r" \1 ", text
-        )  # Add space around punctuation
-        text = re.sub(
-            r"([a-z])([A-Z])", r"\1 \2", text
-        )  # Add space for camel-case artifacts
-
-        # Fix common OCR confusion
-        fixes = {
-            "1mg": "1 mg",
-            "lmg": "1 mg",
-            "I mg": "1 mg",
-            "0": "O",  # Only if surrounding characters are letters?
-            "Phone(": "Phone: (",
-            "|": "I",
-        }
-        for wrong, right in fixes.items():
-            text = text.replace(wrong, right)
-
-        result["cleaned_text"] = text.strip()
-        cleaned_results.append(result)
-
-    return cleaned_results
+# Main
 
 
-# Label-Aware Parser
-LABELS = {
-    "name": ["name", "patient name", "pt name", "patient"],
-    "date": ["date", "issued date", "visit date"],
-    "address": ["address", "addr", "residence"],
-    "phone": ["phone", "tel", "telephone"],
-    "refill": ["refill"],
-}
-
-
-def normalize_label(line: str) -> str:
-    line_lower = line.lower()
-    for label, variants in LABELS.items():
-        for variant in variants:
-            if variant in line_lower:
-                return label
-    return None
-
-
-def extract_key_values(text: str) -> dict:
-    extracted = {
-        "name": None,
-        "date": None,
-        "address": None,
-        "phone": None,
-        "doctor": None,
-        "medications": [],
-        "refill": None,
-    }
-
-    # 1. Split into lines for easier parsing
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-
-    # 2. Try structured field matching
-    for line in lines:
-        line_lower = line.lower()
-
-        # Name / Patient
-        if any(label in line_lower for label in LABELS["name"]):
-            match = re.search(
-                r"(?:Name|Patient)[^\w]*[:\-]?\s*(.*)", line, re.IGNORECASE
-            )
-            if match:
-                extracted["name"] = match.group(1).strip()
-
-        # Date
-        elif any(label in line_lower for label in LABELS["date"]):
-            match = re.search(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", line)
-            if match:
-                extracted["date"] = match.group(1).strip()
-
-        # Address
-        elif any(label in line_lower for label in LABELS["address"]):
-            match = re.search(r"(?:Address)[^\w]*[:\-]?\s*(.*)", line, re.IGNORECASE)
-            if match:
-                extracted["address"] = match.group(1).strip()
-
-        # Phone
-        elif any(label in line_lower for label in LABELS["phone"]):
-            match = re.search(r"(\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{4})", line)
-            if match:
-                extracted["phone"] = match.group(1)
-
-        # Refill
-        elif any(label in line_lower for label in LABELS["refill"]):
-            match = re.search(r"Refill[^\w]*[:\-]?\s*(.*)", line, re.IGNORECASE)
-            if match:
-                extracted["refill"] = match.group(1).strip()
-
-    # 3. Doctor line (first line heuristic)
-    if lines and "dr" in lines[0].lower():
-        extracted["doctor"] = lines[0]
-
-    # 4. Medication extraction — look for drug lines and instructions
-    drug_lines = []
-    instructions = ""
-    in_directions = False
-
-    for line in lines:
-        # Detect med name + dosage
-        med_match = re.match(r"([A-Za-z]+)\s+([\d\.]+\s*(?:mg|gram|ml|mcg|g))", line)
-        if med_match:
-            drug_lines.append(
-                {
-                    "name": med_match.group(1),
-                    "dosage": med_match.group(2),
-                    "instructions": "",
-                }
-            )
-
-        # Detect Directions section
-        if "directions" in line.lower():
-            in_directions = True
-            continue
-
-        if in_directions:
-            if "refill" in line.lower():  # end of instruction block
-                in_directions = False
-                continue
-            instructions += line + " "
-
-    # Map directions back to meds if one-to-one
-    if len(drug_lines) == 1:
-        drug_lines[0]["instructions"] = instructions.strip()
-    elif len(drug_lines) > 1:
-        parts = re.split(r"\b(?:\d+\s+pill|tablet|every|for)\b", instructions)
-        for i, med in enumerate(drug_lines):
-            if i < len(parts):
-                med["instructions"] = parts[i].strip()
-
-    extracted["medications"] = drug_lines
-
-    return extracted
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python ocr.py <file_path>")
+    else:
+        file_path = sys.argv[1]
+        final_result = run_pipeline(file_path)
+        pprint(final_result)
