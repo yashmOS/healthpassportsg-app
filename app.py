@@ -1,6 +1,7 @@
 import os
 import logging
 import sqlite3
+import json
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_session import Session
@@ -9,7 +10,6 @@ from werkzeug.utils import secure_filename
 
 from helpers.login import login_required
 from helpers.sql import SQLITE
-
 
 # Configure application
 app = Flask(__name__)
@@ -189,3 +189,10 @@ def view():
         }
     ]
     return render_template('view.html', records=medical_records)
+
+@app.route("/record", methods=["GET"])
+def record():
+    # Load JSON file
+    with open("Result.json", "r") as f:
+        data = json.load(f)
+    return render_template("record.html", record=data)

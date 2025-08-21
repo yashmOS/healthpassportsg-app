@@ -7,6 +7,7 @@ sends them to Gemini for structured parsing, and saves results as JSON.
 
 Usage:
     python ocr.py <path_to_file>
+    python services/ocr.py ./static/uploads/Invoice.pdf
 Or import as a module:
     from ocr import run_pipeline, Result
 """
@@ -24,13 +25,15 @@ import cv2
 import numpy as np
 from langdetect import detect, DetectorFactory
 
+from dotenv import load_dotenv
 import google.generativeai as genai
 
 # Ensure langdetect is deterministic
 DetectorFactory.seed = 0
 
 # Configure Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_API_KEY")  # Replace securely
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Replace securely
 genai.configure(api_key=GEMINI_API_KEY)
 
 
@@ -183,12 +186,12 @@ def parse_medical_with_gemini(file_path: str, extracted_text: str) -> Dict:
     """
 
     file_ref = genai.upload_file(path=file_path)
+    print("file_ref", file_ref)
 
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(
         contents=[
-            {"role": "user", "parts": [{"text": prompt}]},
-            file_ref
+            {"role": "user", "parts": [{"text": prompt}, {"file_data": {"mime_type": file_ref.mime_type, "uri": file_ref.uri}}]}
         ],
         generation_config={
             "response_mime_type": "application/json",
