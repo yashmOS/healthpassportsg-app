@@ -1,0 +1,58 @@
+{
+  "patient_details": {
+    "name": "RAVI",
+    "date": "20 JUN 2025",
+    "address": "18D Circuit Road #08-123 Singapore 374018",
+    "phone": "",
+    "refill": ""
+  },
+  "record_metadata": {
+    "record_type": "TAX INVOICE",
+    "hospital_name": "Alexandra Health Pte Ltd (Khoo Teck Puat Hospital)",
+    "doctor_name": "",
+    "department": "A&E",
+    "record_date": "23 JUN 2025",
+    "other_metadata": {
+      "bill_ref_no": "AFU1234567891E",
+      "mrn": "12345678"
+    }
+  },
+  "sections": {
+    "line_items": [
+      {
+        "description": "A&E Attendance Fee (1 EA)",
+        "before_subsidy": "326.00",
+        "after_subsidy": "163.00"
+      },
+      {
+        "description": "Radiology Foot (1 EA)",
+        "before_subsidy": "77.50",
+        "after_subsidy": "0.00"
+      },
+      {
+        "description": "Paracetamol 450mg, 0rphenadrine Citrate 35mg Tablet (40 TAB)",
+        "before_subsidy": "8.40",
+        "after_subsidy": "1.40"
+      }
+    ],
+    "medications": [
+      {
+        "name": "Paracetamol 450mg, 0rphenadrine Citrate 35mg Tablet",
+        "dosage": "40 TAB"
+      }
+    ],
+    "lab_results": [],
+    "diagnoses": []
+  },
+  "totals": {
+    "before_subsidy": "411.90",
+    "govt_subsidy": "-247.50",
+    "before_gst": "164.40",
+    "gst": "14.80",
+    "gst_absorbed": "-14.80",
+    "after_subsidy": "164.40",
+    "net_payment": "-164.40",
+    "final_payable": "0.00"
+  },
+  "other_details": {}
+}
