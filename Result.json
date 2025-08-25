@@ -14,7 +14,7 @@
     "record_date": "23 JUN 2025",
     "other_metadata": {
       "bill_ref_no": "AFU1234567891E",
-      "mrn": "12345678"
+      "case_no": "12345678"
     }
   },
   "sections": {
@@ -37,8 +37,8 @@
     ],
     "medications": [
       {
-        "name": "Paracetamol 450mg, 0rphenadrine Citrate 35mg Tablet",
-        "dosage": "40 TAB"
+        "name": "Paracetamol 450mg, 0rphenadrine Citrate 35mg Tablet (40 TAB)",
+        "dosage": ""
       }
     ],
     "lab_results": [],

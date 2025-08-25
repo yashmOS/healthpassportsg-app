@@ -4,16 +4,38 @@
     
     <!-- Upload function -->
     <div class="container p-5 my-5 border">
+        {% if not photo_url %}
         <h1 class="mb-4">Upload Your Medical Report</h1>
         <p>Take a photo of your prescription, discharge summary or test result.</p>
         <button class="btn border mb-4 rounded bg-light">📸 Take Photo</button>
         <form method="POST" enctype="multipart/form-data" class="p-4 border rounded bg-light">
             <div class="mb-3">
                 <!-- <label for="formFile" class="form-label">Upload your photo</label> -->
-                <input class="form-control" type="file" id="formFile" name="photo" accept="image/*">
+                <input class="form-control" type="file" id="formFile" name="photo" accept="image/*, application/pdf">
             </div>
             <button type="submit" class="btn btn-primary">Upload</button>
         </form>
+        {% endif %}
+
+        {% if data %}
+            <div class="card mb-4">
+                <div class="card-header">Patient Details</div>
+                    <div class="card-body">
+                    <p><strong>Name:</strong> {{ data.patient_details.name }}</p>
+                    <p><strong>Date:</strong> {{ data.patient_details.date }}</p>
+                    <p><strong>Hospital:</strong> {{ data.record_metadata.hospital_name }}</p>
+                    <!-- Iterate through all datas -->
+                    {% for diagnosis in data.sections.diagnoses %}
+                        <p><strong>Diagnosis:</strong> {{ diagnosis }}</p>
+                    {% endfor %}
+                    {% for medication in data.sections.medications %}
+                        <p><strong>Medication:</strong> {{ medication.name }}</p>
+                    {% endfor %}
+                    </div>
+            </div>
+            <a href="/upload?success=True" class="btn border mb-4 rounded bg-light">Confirm Submission</a>
+            <a href="/" class="btn border mb-4 rounded bg-light">Go Back to Home Page</a>
+        {% endif %}
 
         {% if photo_url %}
             <div class="mt-4">
