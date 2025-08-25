@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block main %}
+
+    <!-- Patient Details -->
+    <div class="card mb-4">
+        <div class="card-header">Patient Details</div>
+        <div class="card-body">
+        <p><strong>Name:</strong> {{ record.patient_details.name }}</p>
+        <p><strong>Date:</strong> {{ record.patient_details.date }}</p>
+        <p><strong>Address:</strong> {{ record.patient_details.address }}</p>
+        </div>
+    </div>
+
+{% endblock %}

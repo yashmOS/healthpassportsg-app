@@ -2,6 +2,8 @@ import os
 import logging
 import sqlite3
 import json
+import ast
+from pathlib import Path
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_session import Session
@@ -10,6 +12,8 @@ from werkzeug.utils import secure_filename
 
 from helpers.login import login_required
 from helpers.sql import SQLITE
+
+from services.ocr import run_pipeline
 
 # Configure application
 app = Flask(__name__)
@@ -29,7 +33,7 @@ Session(app)
 db = SQLITE("healthpassportsg.db", traceback=True)
 
 UPLOAD_FOLDER = "static/uploads"
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 def allowed_file(filename):
@@ -47,29 +51,6 @@ def after_request(response):
 @app.route("/")
 def index():
     return render_template("index.html")
-
-@app.route("/upload", methods=["GET", "POST"])
-def upload():
-    """Upload a photo"""
-    photo_url = None
-    if request.method == "POST":
-        if "photo" not in request.files:
-            flash("No file part")
-            return redirect(request.url)
-        file = request.files["photo"]
-        if file.filename == "":
-            flash("No selected file")
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(filepath)
-            photo_url = url_for("static", filename="uploads/" + filename)
-            flash("File uploaded successfully!")
-        else:
-            flash("Invalid file type")
-    return render_template("upload.html", photo_url=photo_url)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -167,32 +148,96 @@ def register():
 
 @app.route("/view", methods=["GET"])
 def view():
-    # Dummy data, to fetch from DB and return with a list of dictionaries containing the following fields.
+    # Dummy data to lengthen conditions
     medical_records = [
         {
-            'date': '1 May 2025',
+            'date': '1 MAY 2025',
             'hospital_name': 'Raffles Medical',
             'condition': 'Headache',
             'prescription': 'Panadol'
         },
         {
-            'date': '29 January 2024',
+            'date': '29 JAN 2024',
             'hospital_name': 'Thomson Medical',
             'condition': 'Lower back pain',
             'prescription': 'Panadol'
         },
         {
-            'date': '8 May 2023',
+            'date': '8 MAY 2023',
             'hospital_name': 'Square Hospital',
             'condition': 'Malaria',
             'prescription': None
         }
     ]
-    return render_template('view.html', records=medical_records)
 
-@app.route("/record", methods=["GET"])
-def record():
-    # Load JSON file
-    with open("Result.json", "r") as f:
-        data = json.load(f)
-    return render_template("record.html", record=data)
+    #search DB
+    try:
+        res = db.execute("""
+            SELECT date, hospital, diagnosis, medication FROM visits WHERE patient_id = ?;
+            """, session["user_id"])
+    except Exception as e:
+        print(e)
+    history = []
+    for record in res:
+        print(type(record['hospital']))
+        tmp = dict()
+        tmp['date'] = record['date']
+        tmp['hospital_name'] = record['hospital']
+        diagnosis = ast.literal_eval(record['diagnosis'])
+        if diagnosis:
+            tmp['condition'] = diagnosis[0]
+        else:
+            tmp['condition'] = None
+        if record['medication']:
+            tmp['prescription'] = ast.literal_eval(record['medication'])['name']
+        history.append(tmp)
+    history.extend(medical_records)
+    return render_template('view.html', records=history)
+
+@app.route("/upload", methods=["GET", "POST"])
+def upload():
+    """Upload a photo"""
+    photo_url = None
+    data = None
+    try:
+        success = bool(request.args.get('success'))
+    except:
+        success = False
+    if success:
+        flash("File uploaded successfully!")
+    if request.method == "POST":
+        if "photo" not in request.files:
+            flash("No file part")
+            return redirect(request.url)
+        file = request.files["photo"]
+        if file.filename == "":
+            flash("No selected file")
+            return redirect(request.url)
+        if file and allowed_file(file.filename): 
+            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(filepath)
+            photo_url = url_for("static", filename="uploads/" + filename)
+
+            # Get the absolute path of the current file
+            current_file_path = Path(__file__).resolve()
+            # Get the parent directory of the current file
+            parent_directory = current_file_path.parent
+
+            data = run_pipeline(str(parent_directory)+photo_url)
+            print("RUN PIPELINE SUCCESS!!!")
+            # with open("Result.json", "r") as f:
+            #     data = json.load(f)
+
+            #commit to DB subroutine
+            try:
+                db.execute("""
+                    INSERT INTO visits (patient_id, date, hospital, diagnosis, medication)
+                    VALUES (?, ?, ?, ?, ?);
+                    """, session["user_id"], data["patient_details"]["date"], data["record_metadata"]["hospital_name"], str(data["sections"]["diagnoses"]), str(data["sections"]["medications"][0]))
+            except Exception as e:
+                print(e)
+        else:
+            flash("Invalid file type")
+    return render_template("upload.html", photo_url=photo_url, data=data)
