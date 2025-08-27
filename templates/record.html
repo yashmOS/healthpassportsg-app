@@ -1,15 +1,31 @@
 {% extends "layout.html" %}
 
 {% block main %}
-
-    <!-- Patient Details -->
+    
+    <!-- Upload function -->
+    <div class="container p-5 my-5 border">
     <div class="card mb-4">
         <div class="card-header">Patient Details</div>
-        <div class="card-body">
-        <p><strong>Name:</strong> {{ record.patient_details.name }}</p>
-        <p><strong>Date:</strong> {{ record.patient_details.date }}</p>
-        <p><strong>Address:</strong> {{ record.patient_details.address }}</p>
-        </div>
+            <div class="card-body">
+            <p><strong>Name:</strong> {{ record.patient_details.name }}</p>
+            <p><strong>Date:</strong> {{ record.patient_details.date }}</p>
+            <p><strong>Hospital:</strong> {{ record.record_metadata.hospital_name }}</p>
+            <!-- Iterate through all records -->
+            {% for diagnosis in record.sections.diagnoses %}
+                <p><strong>Diagnosis:</strong> {{ diagnosis }}</p>
+            {% endfor %}
+            {% for medication in record.sections.medications %}
+                <p><strong>Medication:</strong> {{ medication.name }}</p>
+            {% endfor %}
+            </div>
+    </div>
+
+        {% if photo_url %}
+            <div class="mt-4">
+                <h2>Uploaded Photo</h2>
+                <img src="{{ photo_url }}" alt="Uploaded Photo" class="img-fluid">
+            </div>
+        {% endif %}
     </div>
 
 {% endblock %}
