@@ -199,6 +199,7 @@ def upload():
     """Upload a photo"""
     photo_url = None
     data = None
+    pdf = False
     try:
         success = bool(request.args.get('success'))
     except:
@@ -219,6 +220,9 @@ def upload():
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(filepath)
             photo_url = url_for("static", filename="uploads/" + filename)
+            print(photo_url[-3:])
+            if photo_url[-3:]== 'pdf':
+                pdf = True
 
             # Get the absolute path of the current file
             current_file_path = Path(__file__).resolve()
@@ -240,4 +244,5 @@ def upload():
                 print(e)
         else:
             flash("Invalid file type")
-    return render_template("upload.html", photo_url=photo_url, data=data)
+    print(pdf)
+    return render_template("upload.html", photo_url=photo_url, data=data, pdf=pdf)
