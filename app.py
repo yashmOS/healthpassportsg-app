@@ -241,3 +241,7 @@ def upload():
         else:
             flash("Invalid file type")
     return render_template("upload.html", photo_url=photo_url, data=data)
+
+
+if __name__ == "__main__":
+    app.run() 
