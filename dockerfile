@@ -1,9 +1,8 @@
 FROM python:3.13
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies (Tesseract, Poppler, build tools)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     poppler-utils \
@@ -13,23 +12,17 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Verify Tesseract installation
 RUN which tesseract && tesseract --version
 
-# Install uv package manager
+# Install uv to export requirements, not to manage venv
 RUN pip install uv
 
-# Copy project files
 COPY . .
 
-# Sync Python dependencies into .venv
-RUN uv sync
+# Instead of creating a separate .venv, install directly into container
+RUN uv pip install --system --requirement pyproject.toml || uv pip install --system --editable .
 
-# Set Flask app explicitly
 ENV FLASK_APP=app.py
-
-# Expose Render’s assigned port
 EXPOSE 10000
 
-# Run Flask using the virtual environment Python and entrypoint
-CMD ["/app/.venv/bin/python", "entrypoint.py"]
+CMD ["python", "entrypoint.py"]
