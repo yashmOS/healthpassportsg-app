@@ -1,0 +1,23 @@
+# Ignore virtual environments
+.venv
+venv
+env
+
+# Ignore Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore local datasets, notebooks, and other large files
+data/
+*.csv
+*.tsv
+*.parquet
+*.ipynb
+
+# Ignore git metadata and build artifacts
+.git
+.gitignore
+build/
+dist/
+*.egg-info/
