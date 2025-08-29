@@ -4,7 +4,7 @@ FROM python:3.13-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies first
+# Install system dependencies (tesseract, poppler, build tools)
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     poppler-utils \
@@ -26,14 +26,11 @@ COPY . .
 # Sync Python dependencies into .venv
 RUN uv sync
 
-# Ensure Flask app is recognized
+# Flask app
 ENV FLASK_APP=app.py
-
-# Explicitly set path to Tesseract for pytesseract
-ENV TESSERACT_CMD=/usr/bin/tesseract
 
 # Expose Render’s assigned port
 EXPOSE 10000
 
 # Run Flask using the virtual environment Python
-CMD ["/app/.venv/bin/python", "-c", "import os; import pytesseract; pytesseract.pytesseract.tesseract_cmd=os.environ.get('TESSERACT_CMD','/usr/bin/tesseract'); from flask import Flask; import app; app.app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))"]
+CMD ["/app/.venv/bin/python", "entrypoint.py"]
