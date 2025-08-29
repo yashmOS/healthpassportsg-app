@@ -1,20 +1,19 @@
-# Use slim Python base
-FROM python:3.13-slim
+FROM python:3.13
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (tesseract, poppler, build tools)
+# Install system dependencies (Tesseract, Poppler, build tools)
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     poppler-utils \
     build-essential \
     pkg-config \
     libjpeg-dev \
-    zlib1g-dev && \
-    rm -rf /var/lib/apt/lists/*
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Verify tesseract installation
+# Verify Tesseract installation
 RUN which tesseract && tesseract --version
 
 # Install uv package manager
@@ -26,11 +25,11 @@ COPY . .
 # Sync Python dependencies into .venv
 RUN uv sync
 
-# Flask app
+# Set Flask app explicitly
 ENV FLASK_APP=app.py
 
 # Expose Render’s assigned port
 EXPOSE 10000
 
-# Run Flask using the virtual environment Python
+# Run Flask using the virtual environment Python and entrypoint
 CMD ["/app/.venv/bin/python", "entrypoint.py"]

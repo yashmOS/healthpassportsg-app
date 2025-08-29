@@ -1,8 +1,8 @@
 import os
 import pytesseract
-from app import app  # import your Flask app
+from app import app  
 
-# Explicitly set the Tesseract binary path
+# Explicitly set Tesseract binary path
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 # Run Flask
