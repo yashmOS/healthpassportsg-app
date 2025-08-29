@@ -22,7 +22,7 @@ elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]];
     echo "Add both to your PATH environment variable."
 
 else
-    echo "Unsupported OS. Please install tesseract and poppler manually."
+    echo "Unsupported OS $OSTYPE. Please install tesseract and poppler manually."
 fi
 
 echo "Installing Python dependencies..."
