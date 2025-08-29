@@ -1,6 +1,8 @@
 flask
+flask_session
 gunicorn
 uvicorn
+dotenv
 
 # Core OCR and PDF processing
 pytesseract
