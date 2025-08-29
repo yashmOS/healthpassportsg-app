@@ -1,3 +1,20 @@
 flask
 gunicorn
 uvicorn
+
+# Core OCR and PDF processing
+pytesseract
+pdf2image
+pillow
+opencv-python-headless
+numpy
+pymupdf   # fitz
+
+# Language detection
+langdetect
+
+# Google Gemini API
+google-generativeai
+
+# Utility
+pprintpp
