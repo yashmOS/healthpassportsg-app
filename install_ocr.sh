@@ -14,16 +14,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "Installing/updating tesseract and poppler..."
     brew install tesseract poppler || brew upgrade tesseract poppler
 
-    # verify Tesseract
-    tesseract --version
-
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux
     echo "Installing tesseract and poppler..."
     apt-get update && apt-get install -y tesseract-ocr poppler-utils
-
-    # verify Tesseract
-    tesseract --version
 
 elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
     # Windows
