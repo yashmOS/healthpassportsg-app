@@ -14,13 +14,11 @@ RUN apt-get update && apt-get install -y \
 
 RUN which tesseract && tesseract --version
 
-# Install uv to export requirements, not to manage venv
-RUN pip install uv
-
+# Copy project files
 COPY . .
 
-# Instead of creating a separate .venv, install directly into container
-RUN uv pip install --system --requirement pyproject.toml || uv pip install --system --editable .
+# Install Python dependencies into system Python
+RUN pip install -r requirements.txt
 
 ENV FLASK_APP=app.py
 EXPOSE 10000
